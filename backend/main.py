@@ -2,12 +2,10 @@ from fastapi import FastAPI
 
 app = FastAPI()
 
-
 @app.get("/")
 async def read_root():
-    return {"Hello": "World"}
+    return {"Welcome to": "Rootmap"}
 
-
-@app.get("/items/{item_id}")
-async def read_item(item_id: int, q: str | None = None):
-    return {"item_id": item_id, "q": q}
+@app.get("/init-request/")
+async def read_request(timer_status: int, token_value: str):
+    return {"timer_status": timer_status, "token_value": token_value}
