@@ -38,11 +38,14 @@ rootmap/
 
 ### Backend setup
 
+The backend entry point is `backend/main.py`. Put supporting backend modules and
+directories directly in `backend/src/` (for example, `backend/src/ssh.py`).
+
 Run the following:
 ``` sh
     cd backend
     uv sync
-    uv run uvicorn rootmap.main:app --reload
+    uv run uvicorn main:app --reload
 ```
 
 ### Client setup

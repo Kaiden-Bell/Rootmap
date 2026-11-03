@@ -1,2 +1,3 @@
-def main() -> None:
-    print("Hello from rootmap-client!")
+from rootmap_client.main import main
+
+__all__ = ["main"]
