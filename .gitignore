@@ -23,6 +23,9 @@ frontend/.vite/
 .idea/
 .DS_Store
 
+# Resulting Files/Dirs
+result/
+
 # Extra logs
 *.log
 
