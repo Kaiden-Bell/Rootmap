@@ -1,0 +1,12 @@
+[project]
+name = "rootmap-backend"
+version = "0.1.0"
+description = "Add your description here"
+readme = "../README.md"
+authors = [
+    { name = "Kaiden Bell", email = "kaidenbell@unr.edu" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi[standard]>=0.162.0",
+]

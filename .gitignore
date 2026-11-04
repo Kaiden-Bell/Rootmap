@@ -1,0 +1,32 @@
+# Secrets
+.env 
+.env.*
+
+
+# Python exclusions
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# Node / Vite exclusions
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Extra logs
+*.log
+
+# Local DB
+*.db
+*.sqlite
+*.sqlite3
