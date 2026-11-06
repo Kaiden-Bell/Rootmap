@@ -1,5 +1,4 @@
 import os
-
 import httpx
 
 HEAD_NODE_URL = os.environ.get("ROOTMAP_HEAD_URL", "http://127.0.0.1:8000")
