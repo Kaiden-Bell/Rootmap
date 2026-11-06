@@ -20,7 +20,7 @@ from psycopg.rows import dict_row
     SET A DATABASE_URL ENV VARIABLE, WHETHER ITS A .ENV FILE OR TERMINAL.
     Example: 'export DATABASE_URL="postgresql://user:password@localhost:5432/rootmap'
 """
-DEFAULT_DATABASE_URL = "postgresql://localhost:5432/rootmap"
+DEFAULT_DATABASE_URL = "postgresql://postgres:12345@localhost:5432/rootmap"
 
 
 def get_connection() -> psycopg.Connection:

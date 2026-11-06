@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-EXPORT_PATH = "../result/"
+EXPORT_PATH = "results/"
 
 class SystemCollector:
     def __init__(self):
