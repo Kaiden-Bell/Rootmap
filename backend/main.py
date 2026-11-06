@@ -1,3 +1,4 @@
+from fastapi import FastAPI, Request
 import hashlib
 import hmac
 import secrets
@@ -178,6 +179,17 @@ async def list_hosts() -> list[dict[str, int | str]]:
     return [dict(row) for row in rows]
 
 
+@app.get("/init-request/")
+async def read_request(timer_status: int, token_value: str):
+    return {"timer_status": timer_status, "token_value": token_value}
+
+@app.post("/client-report")
+async def display_data(payload: dict):
+    # 1. VIEW DATA ON SERVER SIDE: This prints the incoming JSON to your console
+    print("\n================ RECEIVED POST DATA ================")
+    print(payload)
+    print("====================================================\n")
+    
 # Save host and return host
 @app.post("/api/hosts", status_code=status.HTTP_201_CREATED)
 async def create_host(host: HostInput) -> dict[str, int | str]:
