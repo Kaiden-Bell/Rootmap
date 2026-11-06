@@ -1,0 +1,26 @@
+[
+    {
+        "Service": "nginx",
+        "Local Address": "0.0.0.0",
+        "Port": "80",
+        "PID/Program": "users:((\"nginx\",pid=12839,fd=6),(\"nginx\",pid=12838,fd=6),(\"nginx\",pid=12837,fd=6),(\"nginx\",pid=12836,fd=6),(\"nginx\",pid=12835,fd=6),(\"nginx\",pid=12834,fd=6),(\"nginx\",pid=12833,fd=6),(\"nginx\",pid=12832,fd=6),(\"nginx\",pid=12829,fd=6))"
+    },
+    {
+        "Service": "cups",
+        "Local Address": "0.0.0.0",
+        "Port": "631",
+        "PID/Program": "users:((\"cupsd\",pid=726,fd=8))"
+    },
+    {
+        "Service": "nginx",
+        "Local Address": "[::]",
+        "Port": "80",
+        "PID/Program": "users:((\"nginx\",pid=12839,fd=7),(\"nginx\",pid=12838,fd=7),(\"nginx\",pid=12837,fd=7),(\"nginx\",pid=12836,fd=7),(\"nginx\",pid=12835,fd=7),(\"nginx\",pid=12834,fd=7),(\"nginx\",pid=12833,fd=7),(\"nginx\",pid=12832,fd=7),(\"nginx\",pid=12829,fd=7))"
+    },
+    {
+        "Service": "cups",
+        "Local Address": "[::]",
+        "Port": "631",
+        "PID/Program": "users:((\"cupsd\",pid=726,fd=9))"
+    }
+]
