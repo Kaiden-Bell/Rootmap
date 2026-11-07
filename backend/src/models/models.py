@@ -19,6 +19,9 @@ from pydantic import (
     computed_field,
 )
 
+# CIDR prefix length for IPv4 (e.g. 24), as emitted by the collector.
+CidrPrefix = Annotated[int, Field(ge=0, le=32)]
+
 # Reports
 class SystemReport(BaseModel):
     """Body of ``POST /reports``: the collector's ``system_info.json``.
@@ -27,14 +30,12 @@ class SystemReport(BaseModel):
     as the snake_case attribute names, and serializes back to the original keys
     so the stored JSON stays identical to what the collector produced.
     """
-
     model_config = ConfigDict(
         populate_by_name=True,
         serialize_by_alias=True,
         extra="forbid",
         str_strip_whitespace=True,
     )
-
     operating_system: str = Field(alias="Operating System")
     os_release: str = Field(alias="OS Release")
     hostname: Annotated[str, StringConstraints(min_length=1, max_length=253)] = Field(
@@ -48,12 +49,10 @@ class SystemReport(BaseModel):
 
 class ReportCreated(BaseModel):
     """Response of ``POST /reports`` (``201``)."""
-
     report_id: UUID
 
 class ReportRecord(BaseModel):
     """Response of ``GET /reports/{report_id}``: a stored report."""
-
     report_id: UUID
     collected_at: datetime = Field(
         description="Server-assigned receipt time (the collector emits no timestamp)."
@@ -67,7 +66,6 @@ class ScriptResponse(BaseModel):
     ``sha256`` is derived from ``content`` so the two can never disagree; the
     client loader recomputes it over the received bytes before executing.
     """
-
     script_id: str
     content: str
 
@@ -79,23 +77,18 @@ class ScriptResponse(BaseModel):
 # Auth
 class ClientIdentity(BaseModel):
     """An authenticated client and what it is permitted to do (never holds the token)."""
-
     model_config = ConfigDict(frozen=True)
-
     client_id: str
     allowed_scripts: frozenset[str] = frozenset()
     can_read_reports: bool = False
 
-
 # Health check
 class HealthResponse(BaseModel):
     """Response of unauthenticated ``GET /health``."""
-
     status: str
     database: bool
 
 # Response error
 class ErrorResponse(BaseModel):
     """Shape of FastAPI ``HTTPException`` bodies, for OpenAPI ``responses=``."""
-
     detail: str

@@ -12,10 +12,8 @@ from pydantic import BaseModel, Field, field_validator
 from src.db import get_connection
 from src.db.init_db import init_db
 
-
 # Set the number of password hashes
 PASSWORD_HASH_ROUNDS = 100_000
-
 
 # Hash password
 def hash_password(password: str, salt: str | None = None) -> str:
@@ -25,30 +23,21 @@ def hash_password(password: str, salt: str | None = None) -> str:
     )
     return f"{salt}${digest.hex()}"
 
-
 # Check password against hashed password
 def password_matches(password: str, stored_hash: str) -> bool:
     salt, expected_digest = stored_hash.split("$", maxsplit=1)
     actual_hash = hash_password(password, salt).split("$", maxsplit=1)[1]
     return hmac.compare_digest(actual_hash, expected_digest)
 
-
 # Connect to PostgreSQL
 def connect_to_database() -> psycopg.Connection:
     return get_connection()
-
 
 # Create tables with initial admin account if missing
 def initialize_database() -> None:
     init_db()
     
     with connect_to_database() as connection:
-        connection.execute(
-            "ALTER TABLE hosts ADD COLUMN IF NOT EXISTS os TEXT NOT NULL DEFAULT ''"
-        )
-        connection.execute(
-            "ALTER TABLE hosts ALTER COLUMN collection_interval SET DEFAULT 300"
-        )
         connection.execute(
             """
             INSERT INTO roles (role_name, permissions)
@@ -72,23 +61,19 @@ async def lifespan(_: FastAPI):
     initialize_database()
     yield
 
-
 # Create the API app
 app = FastAPI(title="RootMap Dashboard API", lifespan=lifespan)
-
 
 # Define the login request fields
 class LoginRequest(BaseModel):
     username: Annotated[str, Field(min_length=1)]
     password: Annotated[str, Field(min_length=1)]
 
-
 # Define the password-change request fields
 class PasswordChangeRequest(BaseModel):
     username: Annotated[str, Field(min_length=1)]
     current_password: Annotated[str, Field(min_length=1)]
     new_password: Annotated[str, Field(min_length=8)]
-
 
 # Define the host fields
 class HostInput(BaseModel):
@@ -106,12 +91,10 @@ class HostInput(BaseModel):
             raise ValueError("This field cannot be blank.")
         return value
 
-
 # Check if API is running
 @app.get("/")
 async def read_root() -> dict[str, str]:
     return {"message": "RootMap Dashboard API"}
-
 
 # Check if password needs to be changed
 @app.post("/api/login")
@@ -134,7 +117,6 @@ async def login(request: LoginRequest) -> dict[str, str | bool]:
         "username": request.username,
         "must_change_password": bool(user["must_change_password"]),
     }
-
 
 # Change account password
 @app.post("/api/change-password")
@@ -165,19 +147,17 @@ async def change_password(request: PasswordChangeRequest) -> dict[str, str]:
 
     return {"message": "Password changed."}
 
-
 # Return saved hosts
 @app.get("/api/hosts")
 async def list_hosts() -> list[dict[str, int | str]]:
     
     with connect_to_database() as connection:
         rows = connection.execute(
-            "SELECT host_id AS id, host_name AS hostname, host_ip AS ip, os "
+            "SELECT host_id AS id, host_name AS hostname, host_ip AS ip, os_release AS os "
             "FROM hosts ORDER BY host_id DESC"
         ).fetchall()
     
     return [dict(row) for row in rows]
-
 
 @app.get("/init-request/")
 async def read_request(timer_status: int, token_value: str):
@@ -197,9 +177,9 @@ async def create_host(host: HostInput) -> dict[str, int | str]:
     with connect_to_database() as connection:
         row = connection.execute(
             """
-            INSERT INTO hosts (host_name, host_ip, os)
+            INSERT INTO hosts (host_name, host_ip, os_release)
             VALUES (%s, %s, %s)
-            RETURNING host_id AS id, host_name AS hostname, host_ip AS ip, os
+            RETURNING host_id AS id, host_name AS hostname, host_ip AS ip, os_release AS os
             """,
             (host.hostname, host.ip, host.os),
         ).fetchone()
