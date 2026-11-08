@@ -1,16 +1,15 @@
-from fastapi import FastAPI, Request
 import hashlib
 import hmac
 import secrets
 from contextlib import asynccontextmanager
 from typing import Annotated
-
 import psycopg
-from fastapi import FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, status
 from pydantic import BaseModel, Field, field_validator
-
+from src.auth import get_current_client
 from src.db import get_connection
 from src.db.init_db import init_db
+from src.models.models import ClientIdentity, ReportCreated, SystemReport
 
 # Set the number of password hashes
 PASSWORD_HASH_ROUNDS = 100_000
@@ -36,7 +35,7 @@ def connect_to_database() -> psycopg.Connection:
 # Create tables with initial admin account if missing
 def initialize_database() -> None:
     init_db()
-    
+
     with connect_to_database() as connection:
         connection.execute(
             """
@@ -53,7 +52,6 @@ def initialize_database() -> None:
             """,
             ("Admin", hash_password("Password")),
         )
-
 
 # Set up the database when API starts up
 @asynccontextmanager
@@ -86,7 +84,7 @@ class HostInput(BaseModel):
     @classmethod
     def values_must_not_be_only_whitespace(cls, value: str) -> str:
         value = value.strip()
-        
+
         if not value:
             raise ValueError("This field cannot be blank.")
         return value
@@ -99,7 +97,7 @@ async def read_root() -> dict[str, str]:
 # Check if password needs to be changed
 @app.post("/api/login")
 async def login(request: LoginRequest) -> dict[str, str | bool]:
-    
+
     with connect_to_database() as connection:
         user = connection.execute(
             "SELECT password_hash, must_change_pw AS must_change_password "
@@ -112,7 +110,6 @@ async def login(request: LoginRequest) -> dict[str, str | bool]:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Username or password is incorrect.",
         )
-
     return {
         "username": request.username,
         "must_change_password": bool(user["must_change_password"]),
@@ -121,13 +118,13 @@ async def login(request: LoginRequest) -> dict[str, str | bool]:
 # Change account password
 @app.post("/api/change-password")
 async def change_password(request: PasswordChangeRequest) -> dict[str, str]:
-    
+
     with connect_to_database() as connection:
         user = connection.execute(
             "SELECT password_hash FROM users WHERE username = %s",
             (request.username,),
         ).fetchone()
-        
+
         if user is None or not password_matches(
             request.current_password, user["password_hash"]
         ):
@@ -144,44 +141,55 @@ async def change_password(request: PasswordChangeRequest) -> dict[str, str]:
             """,
             (hash_password(request.new_password), request.username),
         )
-
     return {"message": "Password changed."}
 
 # Return saved hosts
 @app.get("/api/hosts")
 async def list_hosts() -> list[dict[str, int | str]]:
-    
+
     with connect_to_database() as connection:
         rows = connection.execute(
-            "SELECT host_id AS id, host_name AS hostname, host_ip AS ip, os_release AS os "
-            "FROM hosts ORDER BY host_id DESC"
+            "SELECT host_id AS id, host_name AS hostname, host_ip AS ip, "
+            "operating_system AS os FROM hosts ORDER BY host_id DESC"
         ).fetchall()
-    
     return [dict(row) for row in rows]
 
-@app.get("/init-request/")
-async def read_request(timer_status: int, token_value: str):
-    return {"timer_status": timer_status, "token_value": token_value}
+# Receive a collector report from an authenticated host.
+# The host is taken from the token only, so a report can't name another host.
+@app.post("/reports", status_code=status.HTTP_201_CREATED, response_model=ReportCreated)
+def create_report(report: SystemReport, client: ClientIdentity = Depends(get_current_client),
+) -> ReportCreated:
+    with connect_to_database() as connection:
+        connection.execute(
+            """
+            UPDATE hosts
+            SET operating_system = %s, os_release = %s, subnet_mask = %s
+            WHERE host_id = %s
+            """,
+            (
+                report.operating_system,
+                report.os_release,
+                report.subnet_mask,
+                client.host_id,
+            ),
+        )
+        row = connection.execute(
+            "INSERT INTO scans (status, host_id) VALUES ('completed', %s) RETURNING scan_id",
+            (client.host_id,),
+        ).fetchone()
+    return ReportCreated(scan_id=row["scan_id"])
 
-@app.post("/client-report")
-async def display_data(payload: dict):
-    # 1. VIEW DATA ON SERVER SIDE: This prints the incoming JSON to your console
-    print("\n================ RECEIVED POST DATA ================")
-    print(payload)
-    print("====================================================\n")
-    
 # Save host and return host
 @app.post("/api/hosts", status_code=status.HTTP_201_CREATED)
 async def create_host(host: HostInput) -> dict[str, int | str]:
-    
     with connect_to_database() as connection:
         row = connection.execute(
             """
-            INSERT INTO hosts (host_name, host_ip, os_release)
+            INSERT INTO hosts (host_name, host_ip, operating_system)
             VALUES (%s, %s, %s)
-            RETURNING host_id AS id, host_name AS hostname, host_ip AS ip, os_release AS os
+            RETURNING host_id AS id, host_name AS hostname, host_ip AS ip,
+                      operating_system AS os
             """,
             (host.hostname, host.ip, host.os),
         ).fetchone()
-    
     return dict(row)

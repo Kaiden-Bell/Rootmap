@@ -13,16 +13,19 @@ CREATE TABLE IF NOT EXISTS hosts (
     collection_interval INTEGER      NOT NULL DEFAULT 300,   -- Time (s) between collections
     is_active           BOOLEAN      NOT NULL DEFAULT TRUE,
     ssh_port            INTEGER      NOT NULL DEFAULT 22,
+    operating_system    VARCHAR(255),
     os_release          VARCHAR(255),
     subnet_mask         INTEGER      CHECK (subnet_mask BETWEEN 0 AND 32)   -- CIDR prefix length (e.g. 24)
 );
 
+ALTER TABLE hosts ADD COLUMN IF NOT EXISTS operating_system VARCHAR(255);
+
 CREATE TABLE IF NOT EXISTS scripts (
     script_id      INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     script_name    VARCHAR(255) NOT NULL,
-    script_path    TEXT         NOT NULL,        
-    script_version VARCHAR(64)  NOT NULL,        
-    script_type    VARCHAR(64)  NOT NULL,        
+    script_path    TEXT         NOT NULL,
+    script_version VARCHAR(64)  NOT NULL,
+    script_type    VARCHAR(64)  NOT NULL,
     created_at     TIMESTAMPTZ  NOT NULL DEFAULT now(),
     updated_at     TIMESTAMPTZ  NOT NULL DEFAULT now(),
     is_active      BOOLEAN      NOT NULL DEFAULT TRUE
@@ -98,7 +101,7 @@ CREATE TABLE IF NOT EXISTS users (
     must_change_pw BOOLEAN     NOT NULL DEFAULT TRUE
 );
 
--- Important indexes on FKs. 
+-- Important indexes on FKs.
 
 CREATE INDEX IF NOT EXISTS idx_scans_host_id             ON scans (host_id);
 CREATE INDEX IF NOT EXISTS idx_services_host_id          ON services (host_id);

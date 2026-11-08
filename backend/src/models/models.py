@@ -6,11 +6,8 @@ snake_case Python attributes.
 """
 
 import hashlib
-from datetime import datetime
 from ipaddress import IPv4Address
 from typing import Annotated
-from uuid import UUID
-
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -19,7 +16,6 @@ from pydantic import (
     computed_field,
 )
 
-# CIDR prefix length for IPv4 (e.g. 24), as emitted by the collector.
 CidrPrefix = Annotated[int, Field(ge=0, le=32)]
 
 # Reports
@@ -48,16 +44,8 @@ class SystemReport(BaseModel):
     )
 
 class ReportCreated(BaseModel):
-    """Response of ``POST /reports`` (``201``)."""
-    report_id: UUID
-
-class ReportRecord(BaseModel):
-    """Response of ``GET /reports/{report_id}``: a stored report."""
-    report_id: UUID
-    collected_at: datetime = Field(
-        description="Server-assigned receipt time (the collector emits no timestamp)."
-    )
-    report: SystemReport
+    """Response of ``POST /reports`` (``201``). The report is recorded as a scan row."""
+    scan_id: int
 
 # Scripts
 class ScriptResponse(BaseModel):
@@ -79,6 +67,7 @@ class ClientIdentity(BaseModel):
     """An authenticated client and what it is permitted to do (never holds the token)."""
     model_config = ConfigDict(frozen=True)
     client_id: str
+    host_id: int
     allowed_scripts: frozenset[str] = frozenset()
     can_read_reports: bool = False
 

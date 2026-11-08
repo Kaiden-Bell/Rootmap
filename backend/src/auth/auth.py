@@ -26,7 +26,7 @@ from src.db.connection import get_connection
 from src.models.models import ClientIdentity
 
 # Currently: every valid host token may fetch this script and nothing else.
-# A per-token permissions column can replace this later.
+# Remove once script registry is built.
 DEFAULT_ALLOWED_SCRIPTS = frozenset({"system_collector"})
 
 _bearer = HTTPBearer(auto_error=False)
@@ -62,6 +62,16 @@ def revoke_host_tokens(connection, host_id: int) -> None:
         (host_id,),
     )
 
+def revoke_other_tokens(connection, host_id: int, keep_token: str) -> None:
+    """Revoke every token of a host except the one matching ``keep_token``.
+    Used by rotation once the new token is confirmed on the host.
+    """
+    connection.execute(
+        "UPDATE host_tokens SET is_revoked = TRUE "
+        "WHERE host_id = %s AND token_hash <> %s",
+        (host_id, hash_token(keep_token)),
+    )
+
 def authenticate(connection, token: str) -> ClientIdentity | None:
     """Return the client identity for a valid token, or None.
 
@@ -81,11 +91,11 @@ def authenticate(connection, token: str) -> ClientIdentity | None:
         (presented,),
     ).fetchone()
 
-    if row is None or not hmac.compare_digest(row["token_hash"], presented):
-        return None
+    if row is None or not hmac.compare_digest(row["token_hash"], presented): return None
 
     return ClientIdentity(
         client_id=f"host:{row['host_id']}",
+        host_id=row["host_id"],
         allowed_scripts=DEFAULT_ALLOWED_SCRIPTS,
         can_read_reports=False,
     )
@@ -97,11 +107,9 @@ def _unauthorized() -> HTTPException:
         headers={"WWW-Authenticate": "Bearer"},
     )
 
-def get_current_client(
-    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+def get_current_client(credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
 ) -> ClientIdentity:
-    """FastAPI dependency: authenticate the bearer token or raise 401.
-
+    """Authenticate the bearer token or raise 401.
     The DB connection is opened only after a bearer credential is present, so
     a request with no header never touches the database.
     """
@@ -115,9 +123,7 @@ def get_current_client(
         raise _unauthorized()
     return client
 
-def require_script(
-    script_id: str,
-    client: ClientIdentity = Depends(get_current_client),
+def require_script(script_id: str, client: ClientIdentity = Depends(get_current_client),
 ) -> ClientIdentity:
     """Dependency for ``/scripts/{script_id}``: 401 if unauthenticated, 403 if
     this client may not fetch that script. ``script_id`` comes from the path."""
@@ -128,8 +134,7 @@ def require_script(
         )
     return client
 
-def require_report_read(
-    client: ClientIdentity = Depends(get_current_client),
+def require_report_read(client: ClientIdentity = Depends(get_current_client),
 ) -> ClientIdentity:
     """Dependency for ``GET /reports/{id}``: 403 unless the client may read reports."""
     if not client.can_read_reports:
