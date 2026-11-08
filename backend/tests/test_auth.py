@@ -49,7 +49,6 @@ def client():
 
     return TestClient(app)
 
-
 def add_host(conn, *, active: bool = True) -> int:
     host_id = conn.execute(
         """
@@ -58,14 +57,14 @@ def add_host(conn, *, active: bool = True) -> int:
         """,
         (active,),
     ).fetchone()["host_id"]
-    conn.commit()  # get_current_client uses its own connection
+    conn.commit()
     return host_id
 
 # helpers (no DB)
 def test_generate_token_is_unique_and_long():
     tokens = {generate_token() for _ in range(50)}
     assert len(tokens) == 50
-    assert all(len(t) >= 43 for t in tokens)  # 32 bytes, urlsafe base64
+    assert all(len(t) >= 43 for t in tokens)
 
 def test_hash_token_is_deterministic_and_not_the_token():
     token = generate_token()
@@ -78,7 +77,6 @@ def test_default_grant_is_system_collector_only():
 
 
 # 401 tests without credentials (no DB touched)
-
 @pytest.mark.parametrize(
     "headers",
     [
@@ -107,7 +105,6 @@ def test_unauthenticated_request_never_opens_a_db_connection(client, monkeypatch
 
 
 # issue / authenticate (DB)
-
 @pytest.mark.db
 def test_issue_token_stores_only_the_hash(db):
     host_id = add_host(db)
@@ -127,6 +124,7 @@ def test_authenticate_valid_token_returns_identity(db):
 
     assert identity == ClientIdentity(
         client_id=f"host:{host_id}",
+        host_id=host_id,
         allowed_scripts=DEFAULT_ALLOWED_SCRIPTS,
         can_read_reports=False,
     )
@@ -186,7 +184,6 @@ def test_revoke_host_tokens_revokes_all_of_a_hosts_tokens(db):
     assert authenticate(db, a) is None
     assert authenticate(db, b) is None
     assert authenticate(db, other) is not None
-    # kept for audit, not deleted
     assert db.execute("SELECT count(*) AS n FROM host_tokens").fetchone()["n"] == 3
 
 @pytest.mark.db
@@ -308,7 +305,7 @@ def test_report_read_is_403_for_default_host_token(db, client):
 def test_report_read_allowed_when_identity_has_permission(client):
     """Permission logic in isolation: override the identity, no DB needed."""
     client.app.dependency_overrides[get_current_client] = lambda: ClientIdentity(
-        client_id="host:1", can_read_reports=True
+        client_id="host:1", host_id=1, can_read_reports=True
     )
 
     assert client.get("/reports").status_code == 200

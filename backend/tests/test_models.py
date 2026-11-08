@@ -1,14 +1,11 @@
 import hashlib
 import json
-from datetime import datetime, timezone
-from uuid import uuid4
 
 import pytest
 from pydantic import ValidationError
 
 from src.models.models import (
     ClientIdentity,
-    ReportRecord,
     ScriptResponse,
     SystemReport,
 )
@@ -87,17 +84,8 @@ def test_script_response_sha256_matches_content():
     assert s.model_dump()["sha256"] == expected  # included in the response body
 
 
-def test_report_record_nests_report():
-    rec = ReportRecord(
-        report_id=uuid4(),
-        collected_at=datetime.now(timezone.utc),
-        report=SystemReport.model_validate(COLLECTOR_OUTPUT),
-    )
-    assert rec.model_dump(mode="json")["report"]["Hostname"] == "hatchery"
-
-
 def test_client_identity_is_immutable_and_defaults_deny():
-    c = ClientIdentity(client_id="c1")
+    c = ClientIdentity(client_id="c1", host_id=1)
     assert c.allowed_scripts == frozenset()
     assert c.can_read_reports is False
     with pytest.raises(ValidationError):
