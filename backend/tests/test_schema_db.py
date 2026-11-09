@@ -15,8 +15,8 @@ pytestmark = pytest.mark.db
 
 def add_host(conn, name="web01", ip="10.0.0.1"):
     return conn.execute(
-        "INSERT INTO hosts (host_ip, host_name, collection_interval)"
-        " VALUES (%s, %s, 300) RETURNING host_id",
+        "INSERT INTO hosts (host_ip, host_name, operating_system, os_release, subnet_mask)"
+        " VALUES (%s, %s, 'Ubuntu', '22.04.3 LTS (Jammy Jellyfish)', 24) RETURNING host_id",
         (ip, name),
     ).fetchone()["host_id"]
 
@@ -75,6 +75,28 @@ def test_host_defaults(db):
     host = db.execute("SELECT * FROM hosts WHERE host_id = %s", (host_id,)).fetchone()
     assert host["is_active"] is True
     assert host["ssh_port"] == 22
+    assert host["collection_interval"] == 300
+
+def test_host_stores_system_collector_fields(db):
+    host_id = add_host(db, name="hatchery", ip="192.168.220.76")
+    host = db.execute("SELECT * FROM hosts WHERE host_id = %s", (host_id,)).fetchone()
+    assert host["host_name"] == "hatchery"
+    assert host["host_ip"] == "192.168.220.76"
+    assert host["operating_system"] == "Ubuntu"
+    assert host["os_release"] == "22.04.3 LTS (Jammy Jellyfish)"
+    assert host["subnet_mask"] == 24
+
+def test_subnet_mask_is_optional_but_must_be_a_valid_prefix_length(db):
+    db.execute(
+        "INSERT INTO hosts (host_ip, host_name, operating_system, os_release)"
+        " VALUES ('10.0.0.9', 'nomask', 'Ubuntu', '22.04')"
+    )
+    assert db.execute("SELECT subnet_mask FROM hosts").fetchone() == {"subnet_mask": None}
+    with pytest.raises(psycopg.errors.CheckViolation):
+        db.execute(
+            "INSERT INTO hosts (host_ip, host_name, operating_system, os_release, subnet_mask)"
+            " VALUES ('10.0.0.10', 'bad', 'Ubuntu', '22.04', 200)"
+        )
 
 def test_ids_auto_increment(db):
     first = add_host(db, "a", "10.0.0.1")
@@ -104,7 +126,10 @@ def test_optional_columns_accept_null(db):
 
 def test_required_columns_reject_null(db):
     with pytest.raises(psycopg.errors.NotNullViolation):
-        db.execute("INSERT INTO hosts (host_ip, collection_interval) VALUES ('1.1.1.1', 60)")
+        db.execute(
+            "INSERT INTO hosts (host_ip, operating_system, os_release)"
+            " VALUES ('1.1.1.1', 'Ubuntu', '22.04')"
+        )
 
 def test_username_must_be_unique(db):
     db.execute("INSERT INTO roles (role_name, permissions) VALUES ('admin', '*')")

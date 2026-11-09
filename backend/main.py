@@ -7,7 +7,7 @@ from typing import Annotated
 
 import psycopg
 from fastapi import FastAPI, HTTPException, status
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from src.db import get_connection
 from src.db.init_db import init_db
@@ -44,12 +44,6 @@ def initialize_database() -> None:
     
     with connect_to_database() as connection:
         connection.execute(
-            "ALTER TABLE hosts ADD COLUMN IF NOT EXISTS os TEXT NOT NULL DEFAULT ''"
-        )
-        connection.execute(
-            "ALTER TABLE hosts ALTER COLUMN collection_interval SET DEFAULT 300"
-        )
-        connection.execute(
             """
             INSERT INTO roles (role_name, permissions)
             VALUES ('admin', '*')
@@ -77,6 +71,13 @@ async def lifespan(_: FastAPI):
 app = FastAPI(title="RootMap Dashboard API", lifespan=lifespan)
 
 
+# Host columns returned by the API (SQL column AS API field)
+HOST_COLUMNS = (
+    "host_id AS id, host_name AS hostname, host_ip AS ip, "
+    "operating_system, os_release, subnet_mask"
+)
+
+
 # Define the login request fields
 class LoginRequest(BaseModel):
     username: Annotated[str, Field(min_length=1)]
@@ -91,13 +92,19 @@ class PasswordChangeRequest(BaseModel):
 
 
 # Define the host fields
+# Mirrors the system_collector.py JSON; the aliases accept its keys as-is.
 class HostInput(BaseModel):
-    hostname: Annotated[str, Field(min_length=1)]
-    ip: Annotated[str, Field(min_length=1)]
-    os: Annotated[str, Field(min_length=1)]
+    model_config = ConfigDict(populate_by_name=True)
+
+    hostname: Annotated[str, Field(min_length=1, alias="Hostname")]
+    ip: Annotated[str, Field(min_length=1, alias="IP Address")]
+    operating_system: Annotated[str, Field(min_length=1, alias="Operating System")]
+    os_release: Annotated[str, Field(min_length=1, alias="OS Release")]
+    # CIDR prefix length (e.g. 24), sent by the collector as a string
+    subnet_mask: Annotated[int | None, Field(ge=0, le=128, alias="Subnet Mask")] = None
 
     # Reject fields containing only spaces.
-    @field_validator("hostname", "ip", "os")
+    @field_validator("hostname", "ip", "operating_system", "os_release")
     @classmethod
     def values_must_not_be_only_whitespace(cls, value: str) -> str:
         value = value.strip()
@@ -168,12 +175,11 @@ async def change_password(request: PasswordChangeRequest) -> dict[str, str]:
 
 # Return saved hosts
 @app.get("/api/hosts")
-async def list_hosts() -> list[dict[str, int | str]]:
+async def list_hosts() -> list[dict[str, int | str | None]]:
     
     with connect_to_database() as connection:
         rows = connection.execute(
-            "SELECT host_id AS id, host_name AS hostname, host_ip AS ip, os "
-            "FROM hosts ORDER BY host_id DESC"
+            f"SELECT {HOST_COLUMNS} FROM hosts ORDER BY host_id DESC"
         ).fetchall()
     
     return [dict(row) for row in rows]
@@ -192,16 +198,23 @@ async def display_data(payload: dict):
     
 # Save host and return host
 @app.post("/api/hosts", status_code=status.HTTP_201_CREATED)
-async def create_host(host: HostInput) -> dict[str, int | str]:
+async def create_host(host: HostInput) -> dict[str, int | str | None]:
     
     with connect_to_database() as connection:
         row = connection.execute(
-            """
-            INSERT INTO hosts (host_name, host_ip, os)
-            VALUES (%s, %s, %s)
-            RETURNING host_id AS id, host_name AS hostname, host_ip AS ip, os
+            f"""
+            INSERT INTO hosts
+                (host_name, host_ip, operating_system, os_release, subnet_mask)
+            VALUES (%s, %s, %s, %s, %s)
+            RETURNING {HOST_COLUMNS}
             """,
-            (host.hostname, host.ip, host.os),
+            (
+                host.hostname,
+                host.ip,
+                host.operating_system,
+                host.os_release,
+                host.subnet_mask,
+            ),
         ).fetchone()
     
     return dict(row)

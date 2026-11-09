@@ -76,8 +76,9 @@ from src.db import get_connection
 
 with get_connection() as conn:
     conn.execute(
-        "INSERT INTO hosts (host_ip, host_name, collection_interval) VALUES (%s, %s, %s)",
-        ("10.0.0.1", "web01", 300),
+        "INSERT INTO hosts (host_ip, host_name, operating_system, os_release, subnet_mask)"
+        " VALUES (%s, %s, %s, %s, %s)",
+        ("10.0.0.1", "web01", "Ubuntu", "22.04.3 LTS (Jammy Jellyfish)", 24),
     )
     hosts = conn.execute(
         "SELECT host_id, host_name FROM hosts WHERE is_active = %s", (True,)

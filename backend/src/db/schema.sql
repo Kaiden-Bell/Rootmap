@@ -8,9 +8,12 @@
 
 CREATE TABLE IF NOT EXISTS hosts (
     host_id             INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    host_ip             VARCHAR(45)  NOT NULL, -- IPv4 or IPv6
+    host_ip             VARCHAR(45)  NOT NULL,       -- IPv4 or IPv6
     host_name           VARCHAR(253) NOT NULL,
-    collection_interval INTEGER      NOT NULL,   -- Time (s) between collections
+    operating_system    VARCHAR(255) NOT NULL,       -- e.g. 'Ubuntu'
+    os_release          VARCHAR(255) NOT NULL,       -- e.g. '22.04.3 LTS (Jammy Jellyfish)'
+    subnet_mask         INTEGER CHECK (subnet_mask BETWEEN 0 AND 128), -- CIDR prefix length, e.g. 24 (NOT dotted-decimal)
+    collection_interval INTEGER      NOT NULL DEFAULT 300, -- Time (s) between collections
     is_active           BOOLEAN      NOT NULL DEFAULT TRUE,
     ssh_port            INTEGER      NOT NULL DEFAULT 22
 );
