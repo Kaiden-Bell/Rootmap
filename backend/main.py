@@ -195,6 +195,20 @@ async def display_data(payload: dict):
     print("\n================ RECEIVED POST DATA ================")
     print(payload)
     print("====================================================\n")
+    with connect_to_database() as connection:
+        connection.execute(
+            """
+            INSERT INTO hosts (host_name, host_ip, operating_system, os_release, subnet_mask)
+            VALUES (%s, %s, %s, %s, %s)
+            """,
+            (
+                payload.get("Hostname"),
+                payload.get("IP Address"),
+                payload.get("Operating System"),
+                payload.get("OS Release"),
+                payload.get("Subnet Mask"),
+            ),
+        )
     
 # Save host and return host
 @app.post("/api/hosts", status_code=status.HTTP_201_CREATED)
