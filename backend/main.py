@@ -44,6 +44,34 @@ def initialize_database() -> None:
     
     with connect_to_database() as connection:
         connection.execute(
+            "ALTER TABLE hosts ADD COLUMN IF NOT EXISTS operating_system "
+            "VARCHAR(255) NOT NULL DEFAULT ''"
+        )
+        connection.execute(
+            "ALTER TABLE hosts ADD COLUMN IF NOT EXISTS os_release "
+            "VARCHAR(255) NOT NULL DEFAULT ''"
+        )
+        connection.execute(
+            "ALTER TABLE hosts ADD COLUMN IF NOT EXISTS subnet_mask INTEGER"
+        )
+        connection.execute(
+            "ALTER TABLE hosts ALTER COLUMN collection_interval SET DEFAULT 300"
+        )
+        has_os_column = connection.execute(
+            """
+            SELECT EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_schema = current_schema()
+                  AND table_name = 'hosts'
+                  AND column_name = 'os'
+            ) AS has_os_column
+            """
+        ).fetchone()["has_os_column"]
+        if has_os_column:
+            connection.execute(
+                "UPDATE hosts SET operating_system = os WHERE operating_system = ''"
+            )
+        connection.execute(
             """
             INSERT INTO roles (role_name, permissions)
             VALUES ('admin', '*')
@@ -74,7 +102,8 @@ app = FastAPI(title="RootMap Dashboard API", lifespan=lifespan)
 # Host columns returned by the API (SQL column AS API field)
 HOST_COLUMNS = (
     "host_id AS id, host_name AS hostname, host_ip AS ip, "
-    "operating_system, os_release, subnet_mask"
+    "operating_system, os_release, subnet_mask, "
+    "collection_interval, is_active, ssh_port"
 )
 
 
@@ -175,7 +204,7 @@ async def change_password(request: PasswordChangeRequest) -> dict[str, str]:
 
 # Return saved hosts
 @app.get("/api/hosts")
-async def list_hosts() -> list[dict[str, int | str | None]]:
+async def list_hosts() -> list[dict[str, int | str | bool | None]]:
     
     with connect_to_database() as connection:
         rows = connection.execute(
@@ -206,13 +235,13 @@ async def display_data(payload: dict):
                 payload.get("IP Address"),
                 payload.get("Operating System"),
                 payload.get("OS Release"),
-                payload.get("Subnet Mask"),
+                int(payload["Subnet Mask"]) if payload.get("Subnet Mask") else None,
             ),
         )
     
 # Save host and return host
 @app.post("/api/hosts", status_code=status.HTTP_201_CREATED)
-async def create_host(host: HostInput) -> dict[str, int | str | None]:
+async def create_host(host: HostInput) -> dict[str, int | str | bool | None]:
     
     with connect_to_database() as connection:
         row = connection.execute(
