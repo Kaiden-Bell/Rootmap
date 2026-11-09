@@ -6,7 +6,12 @@ type Host = {
   id: number;
   hostname: string;
   ip: string;
-  os: string;
+  operating_system: string;
+  os_release: string;
+  subnet_mask: number | null;
+  collection_interval: number;
+  is_active: boolean;
+  ssh_port: number;
 };
 
 //result of checking a users login
@@ -55,6 +60,10 @@ function App() {
     apiRequest<Host[]>("/hosts").then(setHosts);
   }, [screen]);
 
+  async function handleRefreshHosts() {
+    setHosts(await apiRequest<Host[]>("/hosts"));
+  }
+
   // Check the login and show next screen
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -96,6 +105,7 @@ function App() {
     setScreen("dashboard");
   }
 
+  /*
   // Save host and add to the table
   async function handleAddHost(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -114,6 +124,7 @@ function App() {
     setHosts((currentHosts) => [createdHost, ...currentHosts]);
     formElement.reset();
   }
+  */
 
   if (screen === "login") {
     return (
@@ -197,6 +208,7 @@ function App() {
         ) : (
           <>
             <h1>Hosts</h1>
+            {/*
             <section className="panel">
               <h2>Add host</h2>
               <form className="host-form" onSubmit={handleAddHost}>
@@ -215,7 +227,11 @@ function App() {
                 <button type="submit">Add host</button>
               </form>
             </section>
+            */}
             <h2>Host table</h2>
+            <button type="button" onClick={handleRefreshHosts}>
+              Refresh
+            </button>
             <HostTable hosts={hosts} />
           </>
         )}
@@ -231,17 +247,29 @@ function HostTable({ hosts }: { hosts: Host[] }) {
       <table>
         <thead>
           <tr>
+            <th>Host ID</th>
             <th>Hostname</th>
             <th>IP address</th>
             <th>Operating system</th>
+            <th>OS release</th>
+            <th>Subnet mask</th>
+            <th>Collection interval (s)</th>
+            <th>Active</th>
+            <th>SSH port</th>
           </tr>
         </thead>
         <tbody>
           {hosts.map((host) => (
             <tr key={host.id}>
+              <td>{host.id}</td>
               <td>{host.hostname}</td>
               <td>{host.ip}</td>
-              <td>{host.os}</td>
+              <td>{host.operating_system}</td>
+              <td>{host.os_release}</td>
+              <td>{host.subnet_mask ?? ""}</td>
+              <td>{host.collection_interval}</td>
+              <td>{host.is_active ? "Yes" : "No"}</td>
+              <td>{host.ssh_port}</td>
             </tr>
           ))}
         </tbody>
