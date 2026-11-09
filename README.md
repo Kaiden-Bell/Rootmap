@@ -26,85 +26,26 @@ rootmap/
 ```
 
 ## Environment Setup
-
-### Prerequisites
-
-- Python 3.12+
-- [uv](https://docs.astral.sh/uv/)
-- Node.js and npm
-- Git
-- Docker Desktop (for the local PostgreSQL setup below)
-
-### Initial setup only
-
-Run this once in PowerShell from the repository root to install dependencies:
-
-```powershell
-Set-Location backend; uv sync; Set-Location ..\client; uv sync; Set-Location ..\frontend; npm install; Set-Location ..
+### Installation (Proxmox LXC - Ubuntu 26.04 LTS)
+**1. Install Git**  
+```bash
+sudo apt install git
+```
+  
+**2. Clone the repository**  
+```bash
+git clone -b dev-branch https://github.com/Kaiden-Bell/Rootmap.git
 ```
 
-Start Docker Desktop, then create the local PostgreSQL container and data
-volume:
+**3. Configure ports and credentials in installation scripts if desired**
+   
+**4. Install Rootmap components**  
+Backend (API and Database): `cd Rootmap/backend && ./install_backend.sh`  
+Frontend (Dashboard): `cd Rootmap/frontend && ./install_frontend.sh`  
+Client (Agent): `cd Rootmap/client && ./install_client.sh`  
 
-```powershell
-docker run --name rootmap-db -e POSTGRES_USER=rootmap -e POSTGRES_PASSWORD=rootmap -e POSTGRES_DB=rootmap -p 127.0.0.1:5432:5432 -v rootmap-pgdata:/var/lib/postgresql/data -d postgres:17
-```
+**5. Run client collection script**  
+```bash
+cd Rootmap/client/src/rootmap_client/scripts && uv run main.py --head-ip <head_ip> --head-port <head_backend_port>
+```  
 
-### Start the dashboard
-
-Start the existing database container:
-
-```powershell
-docker start rootmap-db
-```
-
-In one PowerShell terminal from the repository root, start the backend:
-
-```powershell
-Set-Location backend; $env:DATABASE_URL = 'postgresql://rootmap:rootmap@127.0.0.1:5432/rootmap'; uv run uvicorn main:app --reload
-```
-
-In a second PowerShell terminal from the repository root, start the frontend:
-
-```powershell
-Set-Location frontend; npm run dev
-```
-
-### Run backend tests
-
-From the repository root:
-
-```powershell
-Set-Location backend; uv run pytest
-```
-
-Tests that need PostgreSQL are skipped unless `TEST_DATABASE_URL` is set.
-
-### Stop or reset the local setup
-
-Press **Ctrl+C** in the backend and frontend terminals to stop the apps. Stop
-the database container with:
-
-```powershell
-docker stop rootmap-db
-```
-
-Start the database again with `docker start rootmap-db`.
-
-To clear all demo tables and data but keep the container and volume:
-
-1. Stop the backend with **Ctrl+C**.
-2. Run this command in PowerShell:
-
-   ```powershell
-   docker exec rootmap-db psql -U rootmap -d rootmap -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public AUTHORIZATION rootmap;"
-   ```
-
-3. Start the backend again. It recreates the tables and initial **Admin** /
-   **Password** login.
-
-To delete the container and its database files too, stop it first, then run:
-
-```powershell
-docker rm rootmap-db; docker volume rm rootmap-pgdata
-```
