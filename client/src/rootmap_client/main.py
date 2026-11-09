@@ -1,10 +1,15 @@
 import os
+import argparse
 
 import httpx
 from scripts.host import SystemCollector
 
-HEAD_NODE_URL = os.environ.get("ROOTMAP_HEAD_URL", "http://127.0.0.1:8000")
+argument_parser = argparse.ArgumentParser(description="Rootmap Client")
+argument_parser.add_argument("--head-ip", type=str, default="127.0.0.1", help="IP address of the Rootmap head node")
+argument_parser.add_argument("--head-port", type=int, default=5432, help="Port of the Rootmap head node")
 
+args = argument_parser.parse_args()
+HEAD_NODE_URL = f"http://{args.head_ip}:{args.head_port}"
 
 def main():
     # response = httpx.get(f"{HEAD_NODE_URL}/")
