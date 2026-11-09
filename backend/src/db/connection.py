@@ -12,6 +12,7 @@ Usage:
 """
 
 import os
+from dotenv import load_dotenv
 
 import psycopg
 from psycopg.rows import dict_row
@@ -19,11 +20,13 @@ from psycopg.rows import dict_row
 """
     SET A DATABASE_URL ENV VARIABLE, WHETHER ITS A .ENV FILE OR TERMINAL.
     Example: 'export DATABASE_URL="postgresql://user:password@localhost:5432/rootmap'
-"""
-DEFAULT_DATABASE_URL = "postgresql://postgres:12345@localhost:5432/rootmap"
 
+    Set in install_backend.sh
+"""
+
+load_dotenv()
 
 def get_connection() -> psycopg.Connection:
     """Open a new connection. Rows return as dicts."""
-    url = os.environ.get("DATABASE_URL", DEFAULT_DATABASE_URL)
+    url = os.environ.get("DATABASE_URL")
     return psycopg.connect(url, row_factory=dict_row)
