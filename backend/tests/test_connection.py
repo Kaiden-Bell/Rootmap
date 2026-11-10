@@ -5,14 +5,14 @@ from psycopg.rows import dict_row
 from src.db import connection, init_db
 
 
-def test_uses_default_url_when_env_unset(monkeypatch):
+def test_passes_none_when_env_unset(monkeypatch):
     monkeypatch.delenv("DATABASE_URL", raising=False)
     calls = []
     monkeypatch.setattr(psycopg, "connect", lambda *a, **kw: calls.append((a, kw)))
 
     connection.get_connection()
 
-    assert calls[0][0] == (connection.DEFAULT_DATABASE_URL,)
+    assert calls[0][0] == (None,)
 
 
 def test_database_url_env_var_overrides_default(monkeypatch):
