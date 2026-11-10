@@ -5,8 +5,7 @@
 # Install dependencies
 apt update && apt upgrade -y
 apt install curl -y
-curl -LsSf https://astral.sh/uv/install.sh | sh
-. "$HOME/.local/bin/env"
+curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin UV_NO_MODIFY_PATH=1 sh
 uv sync --locked
 
-echo "Send system information to the head node: uv run main.py --head-ip 10.105.165.112 --head-port 2005"
+echo "Send system information to the head node: uv run main.py --head-ip <head_ip> --head-port <head_backend_port>"

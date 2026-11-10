@@ -2,40 +2,47 @@
 # Assumes a fresh ubuntu install, and that you are running this script as root.
 # Execute this script from the Rootmap/backend/ directory.
 
+DB_NAME="rootmap_db"
+DB_USER="rootmap_user"
+
 # Install dependencies
 echo "Installing backend dependencies..."
 apt update && apt upgrade -y
-apt install -y postgresql
-apt install curl -y
+apt install -y postgresql curl
+
 curl -LsSf https://astral.sh/uv/install.sh | sh
 . "$HOME/.local/bin/env"
 
-# Get IP address and subnet mask
-echo "Getting IP address and subnet mask..."
+# Get IP address and subnet (network in CIDR form, e.g. 10.0.0.0/24)
+echo "Getting IP address and subnet..."
 IP=$(ip -brief address show eth0 | awk '{print $3}' | awk -F/ '{print $1}')
-SUBNET=$(ip -o -4 addr show dev eth0 | awk '{print $4}' | cut -d "/" -f 2)
+SUBNET=$(ip -o -4 route show dev eth0 proto kernel scope link | awk '{print $1; exit}')
+
+PGVER=$(pg_lsclusters -h | awk '{print $1; exit}')
+CONF_DIR="/etc/postgresql/${PGVER}/main"
 
 # Configure PostgreSQL to listen on all interfaces (0.0.0.0)
 echo "Configuring PostgreSQL to listen on all interfaces..."
-sudo sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/g" /etc/postgresql/*/main/postgresql.conf
-echo "host    rootmap_db      rootmap_user    ${IP}/${SUBNET}       scram-sha-256" | sudo tee -a /etc/postgresql/*/main/pg_hba.conf
+echo "listen_addresses = '*'" | tee "${CONF_DIR}/conf.d/rootmap.conf" >/dev/null
+HBA_LINE="host    ${DB_NAME}    ${DB_USER}    ${SUBNET}    scram-sha-256"
+grep -qxF "$HBA_LINE" "${CONF_DIR}/pg_hba.conf" || echo "$HBA_LINE" >> "${CONF_DIR}/pg_hba.conf"
 
 # Start and enable PostgreSQL service
 echo "Starting and enabling PostgreSQL service..."
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
+systemctl enable postgresql
+systemctl restart "postgresql@${PGVER}-main"
 
 # Create PostgreSQL user and database
 echo "Creating PostgreSQL user and database..."
-sudo -u postgres psql -c "CREATE USER rootmap_user WITH PASSWORD '12345';"
-sudo -u postgres psql -c "CREATE DATABASE rootmap_db;"
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE rootmap_db TO rootmap_user;"
-sudo -u postgres psql -c "ALTER DATABASE rootmap_db OWNER TO rootmap_user;"
-sudo -u postgres psql -d rootmap_db -c "GRANT ALL ON SCHEMA public TO rootmap_user;"
+sudo -u postgres psql -c "CREATE USER ${DB_USER} WITH PASSWORD '12345';"
+sudo -u postgres psql -c "CREATE DATABASE ${DB_NAME};"
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE ${DB_NAME} TO ${DB_USER};"
+sudo -u postgres psql -c "ALTER DATABASE ${DB_NAME} OWNER TO ${DB_USER};"
+sudo -u postgres psql -d ${DB_NAME} -c "GRANT ALL ON SCHEMA public TO ${DB_USER};"
 
 # Write the DATABASE_URL to a .env file
 echo "Writing DATABASE_URL to .env file..."
-echo "DATABASE_URL=postgresql://rootmap_user:12345@${IP}:5432/rootmap_db" | sudo tee -a .env
+echo "DATABASE_URL=postgresql://${DB_USER}:12345@${IP}:5432/${DB_NAME}" | sudo tee -a .env
 
 # Sync the project and initialize the database
 echo "Syncing the project and initializing the database..."
@@ -57,7 +64,7 @@ UV_BINARY=$(which uv)
 echo "Writing systemd service file..."
 SERVICE_FILE_CONTENT="[Unit]
 Description=Rootmap Backend Service
-After=network.target
+After=network.target postgresql.service
 
 [Service]
 User=$APP_USER
@@ -78,7 +85,7 @@ sudo systemctl daemon-reload
 
 echo "Enabling and starting $SERVICE_NAME.service..."
 sudo systemctl enable $SERVICE_NAME.service
-sudo systemctl start $SERVICE_NAME.service
+sudo systemctl restart $SERVICE_NAME.service
 
 # Check status
 echo "Checking service status..."
