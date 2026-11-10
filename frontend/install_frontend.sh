@@ -14,16 +14,19 @@ HOST="0.0.0.0"
 PORT="5173"
 APP_USER="root"
 
+# Detect project directory
+PROJECT_DIR=$(pwd)
+
 # Create systemd service file
 echo "Writing systemd service file..."
 SERVICE_FILE_CONTENT="[Unit]
 Description=Rootmap Frontend Service
-After=network.target
+After=network.target rootmap_backend.service
 
 [Service]
 Type=simple
 User=$APP_USER
-WorkingDirectory=/root/Rootmap/frontend
+WorkingDirectory=$PROJECT_DIR
 ExecStart=/usr/bin/npm run dev -- --host $HOST --port $PORT
 Restart=on-failure
 
@@ -38,7 +41,7 @@ sudo systemctl daemon-reload
 
 echo "Enabling and starting $SERVICE_NAME.service..."
 sudo systemctl enable $SERVICE_NAME.service
-sudo systemctl start $SERVICE_NAME.service
+sudo systemctl restart $SERVICE_NAME.service
 
 # Check status
 echo "Checking service status..."
