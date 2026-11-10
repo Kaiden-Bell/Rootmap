@@ -23,10 +23,11 @@ from psycopg.rows import dict_row
 
     Set in install_backend.sh
 """
+DEFAULT_DATABASE_URL = "postgresql://rootmap_user:12345@localhost:5432/rootmap_db"
 
 load_dotenv()
 
 def get_connection() -> psycopg.Connection:
     """Open a new connection. Rows return as dicts."""
-    url = os.environ.get("DATABASE_URL")
+    url = os.environ.get("DATABASE_URL", DEFAULT_DATABASE_URL)
     return psycopg.connect(url, row_factory=dict_row)
