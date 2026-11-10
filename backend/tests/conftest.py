@@ -27,6 +27,8 @@ def db(monkeypatch):
     """A connection to a fresh, isolated copy of the schema."""
     base_url = os.environ.get("TEST_DATABASE_URL")
     if not base_url:
+        if os.environ.get("CI"):
+            pytest.fail("TEST_DATABASE_URL must be set in CI")
         pytest.skip("TEST_DATABASE_URL not set")
 
     schema = f"test_{uuid.uuid4().hex[:12]}"

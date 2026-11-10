@@ -11,8 +11,7 @@ from tests.test_schema_file import EXPECTED_TABLES
 
 pytestmark = pytest.mark.db
 
-# helpers 
-
+# Helpers (Inserts data into tables, then returns the row's PK)
 def add_host(conn, name="web01", ip="10.0.0.1"):
     return conn.execute(
         "INSERT INTO hosts (host_ip, host_name, operating_system, os_release, subnet_mask)"
@@ -50,7 +49,7 @@ def add_script(conn, name="ports.sh"):
 def count(conn, table):
     return conn.execute(f"SELECT count(*) AS n FROM {table}").fetchone()["n"]
 
-# schema creation tests
+# Schema tests (Checks schema.sql created the right tables)
 def test_all_tables_created(db):
     rows = db.execute(
         "SELECT table_name FROM information_schema.tables"
@@ -58,13 +57,11 @@ def test_all_tables_created(db):
     ).fetchall()
     assert {r["table_name"] for r in rows} == EXPECTED_TABLES
 
-
 def test_init_db_can_run_twice(db):
     init_db()
     assert count(db, "hosts") == 0
 
-# testing constraints, defaults, cascading deletes, etc.
-
+# Assess behavior of schema.sql (inserts, defaults, constraints, etc.)
 def test_rows_come_back_as_dicts(db):
     add_host(db, name="web01")
     row = db.execute("SELECT host_name FROM hosts").fetchone()
@@ -206,9 +203,7 @@ def test_cannot_delete_script_that_a_scan_used(db):
     with pytest.raises(psycopg.errors.ForeignKeyViolation):
         db.execute("DELETE FROM scripts WHERE script_id = %s", (script_id,))
 
-
-# testing connection behaviors
-
+# Test connection context behavior (commits on success, rolls back on error)
 def test_with_block_rolls_back_on_error(db):
 
     with pytest.raises(RuntimeError):
