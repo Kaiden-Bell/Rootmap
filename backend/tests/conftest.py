@@ -25,9 +25,9 @@ from src.db.init_db import init_db
 @pytest.fixture
 def db(monkeypatch):
     """A connection to a fresh, isolated copy of the schema."""
-    base_url = os.environ.get("TEST_DATABASE_URL")
+    base_url = os.environ.get("DATABASE_URL")
     if not base_url:
-        pytest.skip("TEST_DATABASE_URL not set")
+        pytest.skip("DATABASE_URL not set")
 
     schema = f"test_{uuid.uuid4().hex[:12]}"
     admin = psycopg.connect(base_url, autocommit=True)
