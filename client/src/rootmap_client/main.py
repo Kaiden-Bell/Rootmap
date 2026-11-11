@@ -35,6 +35,10 @@ def send_report(system_info):
     except httpx.RequestError as exc:
     # Catches other network issues like DNS failures or refused connections
       print(f"Network error occurred: {exc}")
+    except httpx.HTTPStatusError as exc:
+        # Server responded with 4xx or 5xx (e.g., 500 Internal Server Error)
+        print(f"Server error {exc.response.status_code} for {exc.request.url}")
+        print(f"Response body: {exc.response.text}")
 
 if __name__ == "__main__":
     main()
