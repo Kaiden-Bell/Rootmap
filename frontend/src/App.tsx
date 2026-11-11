@@ -26,8 +26,8 @@ type Screen = "login" | "change-password" | "dashboard";
 //dashboard section selected in the sidebar
 type Page = "dashboard" | "hosts";
 
-//json request sent to the backend
-async function apiRequest<T>(
+// Export function for testing
+export async function apiRequest<T>(
   path: string,
   options: { method?: string; body?: object } = {},
 ): Promise<T> {
@@ -127,8 +127,10 @@ function App() {
   */
 
   if (screen === "login") {
+    // key: make React build fresh inputs for each screen instead of reusing the
+    // username input as the "New password" input (which kept the typed username)
     return (
-      <main className="auth-page">
+      <main key="login" className="auth-page">
         <h1>RootMap</h1>
         <section className="panel auth-panel">
           <h2>Sign in</h2>
@@ -150,7 +152,7 @@ function App() {
 
   if (screen === "change-password") {
     return (
-      <main className="auth-page">
+      <main key="change-password" className="auth-page">
         <h1>RootMap</h1>
         <section className="panel auth-panel">
           <h2>Change your password</h2>
@@ -241,7 +243,7 @@ function App() {
 }
 
 // Display saved hosts in a table
-function HostTable({ hosts }: { hosts: Host[] }) {
+export function HostTable({ hosts }: { hosts: Host[] }) {
   return (
     <div className="panel table-panel">
       <table>
