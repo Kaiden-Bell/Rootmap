@@ -109,7 +109,7 @@ and **skips the other 18** (they show as `s`). To run everything, give the tests
 a database:
 
 ```sh
-TEST_DATABASE_URL="$DATABASE_URL" uv run pytest
+DATABASE_URL="$DATABASE_URL" uv run pytest
 ```
 
 Expected: `27 passed`.
@@ -118,7 +118,7 @@ This is safe to point at your dev database. Each database test creates its own
 temporary schema (`test_<random>`), builds the tables inside it, and drops it
 afterwards, so your real tables and data are never touched.
 
-If `TEST_DATABASE_URL` is set but the database is unreachable, the tests
+If `DATABASE_URL` is set but the database is unreachable, the tests
 **fail** rather than skip, so a broken setup doesn't go unnoticed.
 
 | Test file | Needs Postgres? | Covers |
@@ -159,4 +159,4 @@ For now, while the data is just test data:
 | `database "rootmap" does not exist` | Create it (`CREATE DATABASE rootmap;`) or fix the name in `DATABASE_URL`. |
 | `port is already allocated` when starting Docker | Another Postgres is on 5432. Stop it, or use `-p 5433:5432` and put `5433` in `DATABASE_URL`. |
 | `ModuleNotFoundError: No module named 'src'` | Run commands from `backend/`, not the repo root. |
-| 18 tests skipped | `TEST_DATABASE_URL` isn't set (see section 5). |
+| 18 tests skipped | `DATABASE_URL` isn't set (see section 5). |
