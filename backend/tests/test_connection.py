@@ -15,7 +15,7 @@ def test_passes_none_when_env_unset(monkeypatch):
     assert calls[0][0] == (None,)
 
 
-def test_database_url_env_var_overrides_default(monkeypatch):
+def DATABASE_URL_env_var_overrides_default(monkeypatch):
     monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@db.example:5433/other")
     calls = []
     monkeypatch.setattr(psycopg, "connect", lambda *a, **kw: calls.append((a, kw)))

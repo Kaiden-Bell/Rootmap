@@ -1,6 +1,6 @@
 """Run schema.sql against a real Postgres and check it behaves as intended.
 
-Skipped unless TEST_DATABASE_URL is set (see conftest.py).
+Skipped unless DATABASE_URL is set (see conftest.py).
 """
 
 import datetime as dt

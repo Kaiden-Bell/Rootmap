@@ -1,12 +1,12 @@
 """Shared fixtures.
 
-Tests marked `db` talk to a real Postgres. Point TEST_DATABASE_URL at any
+Tests marked `db` talk to a real Postgres. Point DATABASE_URL at any
 database you don't mind us creating a temporary schema in, e.g.
 
-    export TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/postgres"
+    export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/postgres"
 
 Each test gets its own throwaway schema (created from schema.sql and dropped
-afterwards), so your real tables are never touched. If TEST_DATABASE_URL is
+afterwards), so your real tables are never touched. If DATABASE_URL is
 not set, the `db` tests are skipped.
 """
 
@@ -25,11 +25,11 @@ from src.db.init_db import init_db
 @pytest.fixture
 def db(monkeypatch):
     """A connection to a fresh, isolated copy of the schema."""
-    base_url = os.environ.get("TEST_DATABASE_URL")
+    base_url = os.environ.get("DATABASE_URL")
     if not base_url:
         if os.environ.get("CI"):
-            pytest.fail("TEST_DATABASE_URL must be set in CI")
-        pytest.skip("TEST_DATABASE_URL not set")
+            pytest.fail("DATABASE_URL must be set in CI")
+        pytest.skip("DATABASE_URL not set")
 
     schema = f"test_{uuid.uuid4().hex[:12]}"
     admin = psycopg.connect(base_url, autocommit=True)
