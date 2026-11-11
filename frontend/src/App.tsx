@@ -65,24 +65,32 @@ function App() {
   }
 
   // Check the login and show next screen
+  const [loginError, setLoginError] = useState<string | null>(null);
+
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setLoginError(null);
+
     const form = new FormData(event.currentTarget);
     const loginUsername = String(form.get("username") ?? "");
     const password = String(form.get("password") ?? "");
 
-    const result = await apiRequest<LoginResponse>("/login", {
-      method: "POST",
-      body: { username: loginUsername, password },
-    });
+    try {
+      const result = await apiRequest<LoginResponse>("/login", {
+        method: "POST",
+        body: { username: loginUsername, password },
+      });
 
-    setUsername(result.username);
+      setUsername(result.username);
 
-    if (result.must_change_password) {
-      setCurrentPassword(password);
-      setScreen("change-password");
-    } else {
-      setScreen("dashboard");
+      if (result.must_change_password) {
+        setCurrentPassword(password);
+        setScreen("change-password");
+      } else {
+        setScreen("dashboard");
+      }
+    } catch {
+      setLoginError("Incorrect username or password.");
     }
   }
 
@@ -135,6 +143,7 @@ function App() {
         <section className="panel auth-panel">
           <h2>Sign in</h2>
           <form onSubmit={handleLogin}>
+            {loginError && <p role="alert">{loginError}</p>}
             <label>
               Username
               <input name="username" required />
